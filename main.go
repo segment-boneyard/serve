@@ -14,7 +14,7 @@ const Usage = `
     serve --version
 
   Options:
-    -a, --address a   bind address [localhost:3000]
+    -a, --address a   bind address [default: localhost:3000]
     -h, --help        output help information
     -v, --version     output version
 
