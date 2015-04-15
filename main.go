@@ -9,12 +9,12 @@ var Version = "1.0.0"
 
 const Usage = `
   Usage:
-    serve <dir> [--address a]
+    serve <dir> [--bind addr]
     serve -h | --help
     serve --version
 
   Options:
-    -a, --address a   bind address [default: localhost:3000]
+    -b, --bind addr   bind address [default: 0.0.0.0:3000]
     -h, --help        output help information
     -v, --version     output version
 
@@ -24,7 +24,7 @@ func main() {
 	args, err := docopt.Parse(Usage, nil, true, Version, false)
 	log.Check(err)
 
-	addr := args["--address"].(string)
+	addr := args["--bind"].(string)
 	dir := args["<dir>"].(string)
 
 	log.Info("binding to %s", addr)
