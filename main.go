@@ -5,7 +5,7 @@ import "github.com/segmentio/go-log"
 import "github.com/tj/docopt"
 import "net/http"
 
-var Version = "0.0.1"
+var Version = "1.0.0"
 
 const Usage = `
   Usage:
