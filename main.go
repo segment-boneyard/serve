@@ -51,8 +51,6 @@ type hookedResponseWriter struct {
 }
 
 func (hrw *hookedResponseWriter) WriteHeader(status int) {
-	fmt.Println(status)
-	fmt.Println("----" + hrw.ErrorPage + "-----")
 	if status == 404 && hrw.ErrorPage != "" {
 		hrw.ignore = true
 		http.Redirect(hrw.ResponseWriter, hrw.Request, hrw.ErrorPage, http.StatusSeeOther)
