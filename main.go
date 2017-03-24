@@ -56,10 +56,11 @@ type hookedResponseWriter struct {
 func (hrw *hookedResponseWriter) WriteHeader(status int) {
 	if status == 404 && hrw.ErrorPage != "" {
 		hrw.ignore = true
+		hrw.ResponseWriter.Header().Set("Content-Type", "text/html")
 		http.ServeFile(hrw.ResponseWriter, hrw.Request, hrw.ErrorPage)
-	} else {
-		hrw.ResponseWriter.WriteHeader(status)
 	}
+
+	hrw.ResponseWriter.WriteHeader(status)
 }
 
 func (hrw *hookedResponseWriter) Write(p []byte) (int, error) {
