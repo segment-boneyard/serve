@@ -4,7 +4,6 @@ import "github.com/segmentio/serve/logger"
 import "github.com/segmentio/go-log"
 import "github.com/tj/docopt"
 import "net/http"
-import "fmt"
 
 var Version = "1.1.0"
 
@@ -35,6 +34,10 @@ func main() {
 	log.Info("binding to %s", addr)
 	log.Info("serving %s", dir)
 
+	if errPage != "" {
+		errPage = dir + "/" + errPage
+	}
+
 	h := logger.New(http.StripPrefix(prefix, http.FileServer(http.Dir(dir))))
 
 	err = http.ListenAndServe(addr, NotFoundHook{h: h, ErrorPage: errPage})
@@ -53,7 +56,7 @@ type hookedResponseWriter struct {
 func (hrw *hookedResponseWriter) WriteHeader(status int) {
 	if status == 404 && hrw.ErrorPage != "" {
 		hrw.ignore = true
-		http.Redirect(hrw.ResponseWriter, hrw.Request, hrw.ErrorPage, http.StatusSeeOther)
+		http.ServeFile(hrw.ResponseWriter, hrw.Request, hrw.ErrorPage)
 	} else {
 		hrw.ResponseWriter.WriteHeader(status)
 	}
@@ -61,6 +64,7 @@ func (hrw *hookedResponseWriter) WriteHeader(status int) {
 
 func (hrw *hookedResponseWriter) Write(p []byte) (int, error) {
 	if hrw.ignore {
+		http.ServeFile(hrw.ResponseWriter, hrw.Request, hrw.ErrorPage)
 		return len(p), nil
 	}
 	return hrw.ResponseWriter.Write(p)
