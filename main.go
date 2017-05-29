@@ -1,11 +1,18 @@
 package main
 
-import "github.com/segmentio/serve/logger"
-import "github.com/segmentio/go-log"
-import "github.com/tj/docopt"
-import "net/http"
+import (
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path"
 
-var Version = "1.1.0"
+	"github.com/segmentio/go-log"
+	"github.com/segmentio/serve/logger"
+	"github.com/tj/docopt"
+)
+
+var Version = "1.2.0"
 
 const Usage = `
   Usage:
@@ -38,44 +45,53 @@ func main() {
 		errPage = dir + "/" + errPage
 	}
 
-	h := logger.New(http.StripPrefix(prefix, http.FileServer(http.Dir(dir))))
+	server := FileServer(http.Dir(dir), errPage)
 
-	err = http.ListenAndServe(addr, NotFoundHook{h: h, ErrorPage: errPage})
+	handler := logger.New(http.StripPrefix(prefix, server))
+
+	err = http.ListenAndServe(addr, handler) // NotFoundHook{h: h, ErrorPage: errPage})
 	if err != nil {
 		log.Error("failed to bind: %s", err)
 	}
 }
 
-type hookedResponseWriter struct {
-	http.ResponseWriter
-	Request   *http.Request
-	ignore    bool
-	ErrorPage string
+func FileServer(fs http.FileSystem, errorPage string) http.Handler {
+	fsh := http.FileServer(fs)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := fs.Open(path.Clean(r.URL.Path))
+		if os.IsNotExist(err) {
+			fmt.Println("Not found: " + r.URL.Path)
+			NotFound(fs, w, r, errorPage)
+			return
+		}
+		fsh.ServeHTTP(w, r)
+	})
 }
 
-func (hrw *hookedResponseWriter) WriteHeader(status int) {
-	if status == 404 && hrw.ErrorPage != "" {
-		hrw.ignore = true
-		hrw.ResponseWriter.Header().Set("Content-Type", "text/html")
-		http.ServeFile(hrw.ResponseWriter, hrw.Request, hrw.ErrorPage)
-	} else {
-		hrw.ResponseWriter.WriteHeader(status)
+func NotFound(fs http.FileSystem, w http.ResponseWriter, r *http.Request, errorPage string) {
+	w.WriteHeader(404)
+	w.Header().Set("Content-Type", "text/html")
+	WriteFile(fs, w, r, errorPage)
+}
+
+func WriteFile(fs http.FileSystem, w http.ResponseWriter, r *http.Request, errorPage string) {
+	bys, err := ioutil.ReadFile(errorPage)
+	if err != nil {
+		msg, code := toHTTPError(err)
+		http.Error(w, msg, code)
+		return
 	}
+
+	w.Write(bys)
 }
 
-func (hrw *hookedResponseWriter) Write(p []byte) (int, error) {
-	if hrw.ignore {
-		http.ServeFile(hrw.ResponseWriter, hrw.Request, hrw.ErrorPage)
-		return len(p), nil
+func toHTTPError(err error) (msg string, httpStatus int) {
+	if os.IsNotExist(err) {
+		return "404 page not found", http.StatusNotFound
 	}
-	return hrw.ResponseWriter.Write(p)
-}
-
-type NotFoundHook struct {
-	h         http.Handler
-	ErrorPage string
-}
-
-func (nfh NotFoundHook) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	nfh.h.ServeHTTP(&hookedResponseWriter{ResponseWriter: w, Request: r, ErrorPage: nfh.ErrorPage}, r)
+	if os.IsPermission(err) {
+		return "403 Forbidden", http.StatusForbidden
+	}
+	// Default:
+	return "500 Internal Server Error", http.StatusInternalServerError
 }
