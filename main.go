@@ -69,8 +69,6 @@ func FileServer(fs http.FileSystem, errorPage string) http.Handler {
 }
 
 func NotFound(fs http.FileSystem, w http.ResponseWriter, r *http.Request, errorPage string) {
-	w.WriteHeader(404)
-	w.Header().Set("Content-Type", "text/html")
 	WriteFile(fs, w, r, errorPage)
 }
 
