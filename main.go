@@ -59,7 +59,7 @@ func FileServer(fs http.FileSystem, errorPage string) http.Handler {
 	fsh := http.FileServer(fs)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := fs.Open(path.Clean(r.URL.Path))
-		if os.IsNotExist(err) {
+		if err != nil && !os.IsPermission(err) {
 			fmt.Println("Not found: " + r.URL.Path)
 			NotFound(fs, w, r, errorPage)
 			return
