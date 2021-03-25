@@ -1,4 +1,4 @@
-FROM golang:1.8.3
+FROM golang:1.15
 
 RUN go get github.com/segmentio/go-log
 RUN go get github.com/tj/docopt
