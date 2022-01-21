@@ -1,4 +1,4 @@
-FROM golang:1.8.3
+FROM 528451384384.dkr.ecr.us-west-2.amazonaws.com/segment-golang:1.17.3
 
 RUN go get github.com/segmentio/go-log
 RUN go get github.com/tj/docopt
